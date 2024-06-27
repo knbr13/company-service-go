@@ -7,7 +7,7 @@ import (
 )
 
 // GenerateToken generates a new JWT token with the given claims and expiration time.
-func GenerateToken(claims jwt.Claims, jwtSecret string) (string, error) {
+func GenerateToken(claims jwt.Claims, jwtSecret []byte) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 
 	tokenString, err := token.SignedString(jwtSecret)
