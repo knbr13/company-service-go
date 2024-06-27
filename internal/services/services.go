@@ -7,15 +7,15 @@ import (
 )
 
 type Services struct {
-	Users *UserService
+	Users     *UserService
+	Companies *CompanyService
 }
 
 func NewServices(db *sql.DB) *Services {
 	repos := repositories.NewRepositories(db)
 
 	return &Services{
-		Users: &UserService{
-			Repos: &repos,
-		},
+		Users:     &UserService{Repos: &repos},
+		Companies: &CompanyService{Repos: &repos},
 	}
 }

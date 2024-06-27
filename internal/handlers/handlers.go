@@ -8,7 +8,8 @@ import (
 )
 
 type Handlers struct {
-	Users *UserHandler
+	Users     *UserHandler
+	Companies *CompanyHandler
 }
 
 func NewHandlers(db *sql.DB, cfg *config.Config) *Handlers {
@@ -18,6 +19,9 @@ func NewHandlers(db *sql.DB, cfg *config.Config) *Handlers {
 		Users: &UserHandler{
 			Services: srvcs,
 			Cfg:      cfg,
+		},
+		Companies: &CompanyHandler{
+			Services: srvcs,
 		},
 	}
 }
