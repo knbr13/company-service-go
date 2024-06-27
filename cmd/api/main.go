@@ -12,12 +12,13 @@ import (
 
 type app struct {
 	hndlrs *handlers.Handlers
+	cfg    *config.Config
 }
 
 func main() {
 	err := godotenv.Load()
 	if err != nil {
-		log.Fatalf("Failed to load.env file: %s\n", err.Error())
+		log.Fatalf("Failed to load .env file: %s\n", err.Error())
 	}
 
 	cfg, err := config.LoadEnvConfig()
@@ -38,6 +39,7 @@ func main() {
 
 	app := &app{
 		hndlrs: handlers.NewHandlers(db, cfg),
+		cfg:    cfg,
 	}
 
 	log.Println("Starting app server on port :8080")

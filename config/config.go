@@ -4,6 +4,7 @@ import "github.com/caarlos0/env/v11"
 
 type Config struct {
 	JWTKey string `env:"JWT_KEY"`
+	DSN    string `env:"DB_DSN"`
 }
 
 func LoadEnvConfig() (*Config, error) {
