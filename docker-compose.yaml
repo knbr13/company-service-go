@@ -11,9 +11,7 @@ services:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
     ports:
       - '3306:3306'
-    volumes:
-      - mysql_data:/var/lib/mysql
-  
+
   app:
     build: .
     restart: always
@@ -42,7 +40,3 @@ services:
     image: confluentinc/cp-zookeeper:7.6.1
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
-
-volumes:
-  mysql_data:
-    driver: local
