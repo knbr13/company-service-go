@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"slices"
 	"strings"
 
@@ -21,8 +22,8 @@ const (
 
 type CompanyService struct {
 	Repos    *repositories.Repositories
-	producer sarama.SyncProducer
-	errCh    chan<- error
+	Producer sarama.SyncProducer
+	ErrCh    chan<- error
 }
 
 func (s *CompanyService) Create(ctx context.Context, comp *repositories.Company) (string, error) {
@@ -36,7 +37,7 @@ func (s *CompanyService) Create(ctx context.Context, comp *repositories.Company)
 	}
 
 	go func(producer sarama.SyncProducer, comp *repositories.Company, errCh chan<- error) {
-		event := map[string]any{
+		event := map[string]interface{}{
 			"event":   CompanyCreated,
 			"company": comp,
 		}
@@ -52,12 +53,14 @@ func (s *CompanyService) Create(ctx context.Context, comp *repositories.Company)
 			Value: sarama.ByteEncoder(eventBytes),
 		}
 
-		_, _, err = s.producer.SendMessage(msg)
+		_, _, err = producer.SendMessage(msg)
 		if err != nil {
 			errCh <- fmt.Errorf("failed to send message: %w", err)
 			return
 		}
-	}(s.producer, comp, s.errCh)
+
+		log.Printf("Message sent to topic %s for company %s", CompanyCreated, comp.ID)
+	}(s.Producer, comp, s.ErrCh)
 
 	return comp.ID, nil
 }
@@ -76,7 +79,7 @@ func (s *CompanyService) UpdateCompany(ctx context.Context, comp *repositories.C
 	}
 
 	go func(producer sarama.SyncProducer, comp *repositories.Company, errCh chan<- error) {
-		event := map[string]any{
+		event := map[string]interface{}{
 			"event":   CompanyUpdated,
 			"company": comp,
 		}
@@ -92,12 +95,15 @@ func (s *CompanyService) UpdateCompany(ctx context.Context, comp *repositories.C
 			Value: sarama.ByteEncoder(eventBytes),
 		}
 
-		_, _, err = s.producer.SendMessage(msg)
+		_, _, err = producer.SendMessage(msg)
 		if err != nil {
 			errCh <- fmt.Errorf("failed to send message: %w", err)
 			return
 		}
-	}(s.producer, comp, s.errCh)
+
+		log.Printf("Message sent to topic %s for company %s", CompanyUpdated, comp.ID)
+	}(s.Producer, comp, s.ErrCh)
+
 	return nil
 }
 
@@ -107,7 +113,7 @@ func (s *CompanyService) Delete(ctx context.Context, compId string) error {
 	}
 
 	go func(producer sarama.SyncProducer, compId string, errCh chan<- error) {
-		event := map[string]any{
+		event := map[string]interface{}{
 			"event":      CompanyDeleted,
 			"company_id": compId,
 		}
@@ -123,12 +129,14 @@ func (s *CompanyService) Delete(ctx context.Context, compId string) error {
 			Value: sarama.ByteEncoder(eventBytes),
 		}
 
-		_, _, err = s.producer.SendMessage(msg)
+		_, _, err = producer.SendMessage(msg)
 		if err != nil {
 			errCh <- fmt.Errorf("failed to send message: %w", err)
 			return
 		}
-	}(s.producer, compId, s.errCh)
+
+		log.Printf("Message sent to topic %s for company %s", CompanyDeleted, compId)
+	}(s.Producer, compId, s.ErrCh)
 
 	return nil
 }
@@ -147,9 +155,11 @@ func validateCompany(comp *repositories.Company) error {
 	v.Check(comp.Registered != nil, "registered", "required field")
 
 	if !v.Valid() {
+		var sb strings.Builder
 		for k, v := range v.Errors {
-			return validator.ValidationError(fmt.Sprintf("%s: %s", k, v))
+			sb.WriteString(fmt.Sprintf("%s: %s; ", k, v))
 		}
+		return validator.ValidationError(sb.String())
 	}
 
 	return nil

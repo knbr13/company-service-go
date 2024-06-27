@@ -17,6 +17,6 @@ func NewServices(db *sql.DB, producer sarama.SyncProducer, errCh chan<- error) *
 
 	return &Services{
 		Users:     &UserService{Repos: &repos},
-		Companies: &CompanyService{Repos: &repos, producer: producer, errCh: errCh},
+		Companies: &CompanyService{Repos: &repos, Producer: producer, ErrCh: errCh},
 	}
 }

@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/knbr13/company-service-go/internal/repositories"
@@ -21,9 +22,11 @@ func (s *UserService) Register(ctx context.Context, user *repositories.User) err
 	v.Check(len(user.Password) >= 8, "password", "must at least contain 8 characters")
 
 	if !v.Valid() {
+		var sb strings.Builder
 		for k, v := range v.Errors {
-			return validator.ValidationError(fmt.Sprintf("%s: %s", k, v))
+			sb.WriteString(fmt.Sprintf("%s: %s; ", k, v))
 		}
+		return validator.ValidationError(sb.String())
 	}
 
 	user.ID = uuid.New().String()
