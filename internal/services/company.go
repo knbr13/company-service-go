@@ -2,17 +2,27 @@ package services
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"slices"
 	"strings"
 
+	"github.com/IBM/sarama"
 	"github.com/google/uuid"
 	"github.com/knbr13/company-service-go/internal/repositories"
 	"github.com/knbr13/company-service-go/internal/validator"
 )
 
+const (
+	CompanyCreated string = "company_created"
+	CompanyUpdated string = "company_updated"
+	CompanyDeleted string = "company_deleted"
+)
+
 type CompanyService struct {
-	Repos *repositories.Repositories
+	Repos    *repositories.Repositories
+	producer sarama.SyncProducer
+	errCh    chan<- error
 }
 
 func (s *CompanyService) Create(ctx context.Context, comp *repositories.Company) (string, error) {
@@ -21,7 +31,35 @@ func (s *CompanyService) Create(ctx context.Context, comp *repositories.Company)
 	}
 	comp.ID = uuid.New().String()
 
-	return comp.ID, s.Repos.Company.Insert(ctx, comp)
+	if err := s.Repos.Company.Insert(ctx, comp); err != nil {
+		return "", err
+	}
+
+	go func(producer sarama.SyncProducer, comp *repositories.Company, errCh chan<- error) {
+		event := map[string]any{
+			"event":   CompanyCreated,
+			"company": comp,
+		}
+		eventBytes, err := json.Marshal(event)
+		if err != nil {
+			errCh <- fmt.Errorf("failed to marshal event: %w", err)
+			return
+		}
+
+		msg := &sarama.ProducerMessage{
+			Topic: CompanyCreated,
+			Key:   sarama.StringEncoder(comp.ID),
+			Value: sarama.ByteEncoder(eventBytes),
+		}
+
+		_, _, err = s.producer.SendMessage(msg)
+		if err != nil {
+			errCh <- fmt.Errorf("failed to send message: %w", err)
+			return
+		}
+	}(s.producer, comp, s.errCh)
+
+	return comp.ID, nil
 }
 
 func (s *CompanyService) Get(ctx context.Context, compId string) (*repositories.Company, error) {
@@ -32,11 +70,67 @@ func (s *CompanyService) UpdateCompany(ctx context.Context, comp *repositories.C
 	if err := validateCompany(comp); err != nil {
 		return err
 	}
-	return s.Repos.Company.Update(ctx, comp)
+
+	if err := s.Repos.Company.Update(ctx, comp); err != nil {
+		return err
+	}
+
+	go func(producer sarama.SyncProducer, comp *repositories.Company, errCh chan<- error) {
+		event := map[string]any{
+			"event":   CompanyUpdated,
+			"company": comp,
+		}
+		eventBytes, err := json.Marshal(event)
+		if err != nil {
+			errCh <- fmt.Errorf("failed to marshal event: %w", err)
+			return
+		}
+
+		msg := &sarama.ProducerMessage{
+			Topic: CompanyUpdated,
+			Key:   sarama.StringEncoder(comp.ID),
+			Value: sarama.ByteEncoder(eventBytes),
+		}
+
+		_, _, err = s.producer.SendMessage(msg)
+		if err != nil {
+			errCh <- fmt.Errorf("failed to send message: %w", err)
+			return
+		}
+	}(s.producer, comp, s.errCh)
+	return nil
 }
 
 func (s *CompanyService) Delete(ctx context.Context, compId string) error {
-	return s.Repos.Company.Delete(ctx, compId)
+	if err := s.Repos.Company.Delete(ctx, compId); err != nil {
+		return err
+	}
+
+	go func(producer sarama.SyncProducer, compId string, errCh chan<- error) {
+		event := map[string]any{
+			"event":      CompanyDeleted,
+			"company_id": compId,
+		}
+		eventBytes, err := json.Marshal(event)
+		if err != nil {
+			errCh <- fmt.Errorf("failed to marshal event: %w", err)
+			return
+		}
+
+		msg := &sarama.ProducerMessage{
+			Topic: CompanyDeleted,
+			Key:   sarama.StringEncoder(compId),
+			Value: sarama.ByteEncoder(eventBytes),
+		}
+
+		_, _, err = s.producer.SendMessage(msg)
+		if err != nil {
+			errCh <- fmt.Errorf("failed to send message: %w", err)
+			return
+		}
+	}(s.producer, compId, s.errCh)
+
+	return nil
 }
 
 func validateCompany(comp *repositories.Company) error {

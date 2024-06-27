@@ -5,14 +5,17 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/IBM/sarama"
 	"github.com/joho/godotenv"
 	"github.com/knbr13/company-service-go/config"
 	"github.com/knbr13/company-service-go/internal/handlers"
+	"github.com/knbr13/company-service-go/internal/kafka"
 )
 
 type app struct {
-	hndlrs *handlers.Handlers
-	cfg    *config.Config
+	hndlrs   *handlers.Handlers
+	cfg      *config.Config
+	producer sarama.SyncProducer
 }
 
 func main() {
@@ -37,11 +40,31 @@ func main() {
 		log.Fatalf("Failed to ping database: %s\n", err.Error())
 	}
 
-	app := &app{
-		hndlrs: handlers.NewHandlers(db, cfg),
-		cfg:    cfg,
+	producer, err := kafka.ConnectProducer([]string{cfg.KafkaBroker})
+	if err != nil {
+		log.Fatalf("Failed to connect to Kafka: %s\n", err.Error())
 	}
 
-	log.Println("Starting app server on port :8080")
-	http.ListenAndServe(":8080", app.SetupRoutes())
+	errCh := make(chan error, 32)
+
+	app := &app{
+		hndlrs:   handlers.NewHandlers(db, cfg, producer, errCh),
+		cfg:      cfg,
+		producer: producer,
+	}
+
+	httpServer := &http.Server{
+		Addr:    ":8080",
+		Handler: app.SetupRoutes(),
+	}
+
+	go func() {
+		if err := httpServer.ListenAndServe(); err != nil {
+			log.Fatalf("HTTP server error: %s\n", err)
+		}
+	}()
+
+	for err := range errCh {
+		log.Printf("Error received: %s\n", err)
+	}
 }

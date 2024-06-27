@@ -28,7 +28,7 @@ services:
     - .env
     environment:
       DB_DSN: "root:${MYSQL_ROOT_PASSWORD}@tcp(db-mysql:3306)/${MYSQL_DATABASE}"
-
+      KAFKA_BROKER: "kafka:9092"
   kafka:
     image: confluentinc/cp-kafka:7.6.1
     ports:
