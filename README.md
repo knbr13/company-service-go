@@ -51,15 +51,18 @@ The following environment variables are used in the project:
 
 ## API Endpoints
 
+### Public Endpoints (No Authentication Required)
+
 - `POST /register`: Register a new account to get an Auth Token (JWT).
 - `POST /login`: Login if you already have an account, you will get back an Auth Token.
+
+- `GET /companies/{id}`: Get a single company
+
+### Protected Endpoints (JWT Authentication Required)
 
 - `POST /companies`: Create a new company
 - `PATCH /companies/{id}`: Update an existing company
 - `DELETE /companies/{id}`: Delete a company
-- `GET /companies/{id}`: Get a single company
-
-Note: All endpoints except GET require authentication.
 
 ## Authentication
 
