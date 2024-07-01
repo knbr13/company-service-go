@@ -71,7 +71,8 @@ The service uses JWT for authentication. To access protected endpoints, include 
 ## Development
 
 1. Ensure you have Docker and Docker Compose installed
-2. Run:
+2. Create a new file named `.env`, copy the environment variables from `.env.example` file, paste them into the `.env` file, and modify the example values.
+3. Run:
 ```bash
 docker compose up --build
 ```
