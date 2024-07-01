@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/IBM/sarama"
-	"github.com/joho/godotenv"
 	"github.com/knbr13/company-service-go/config"
 	"github.com/knbr13/company-service-go/internal/handlers"
 	"github.com/knbr13/company-service-go/internal/kafka"
@@ -24,11 +23,6 @@ type app struct {
 }
 
 func main() {
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatalf("Failed to load .env file: %s\n", err.Error())
-	}
-
 	cfg, err := config.LoadEnvConfig()
 	if err != nil {
 		log.Fatalf("Failed to load config: %s\n", err.Error())
@@ -83,6 +77,7 @@ func main() {
 	}()
 
 	go func() {
+		log.Println("starting server on port :8080")
 		if err := httpServer.ListenAndServe(); err != nil {
 			log.Fatalf("HTTP server error: %s\n", err)
 		}

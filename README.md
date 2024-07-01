@@ -70,30 +70,16 @@ The service uses JWT for authentication. To access protected endpoints, include 
 
 ## Development
 
-To run the application without Docker and Docker Compose:
-
-1. Ensure you have Go 1.22 or later installed
-2. Install dependencies:
-```bash
-go mod tidy
-```
-3. Set up your local MySQL database and Kafka instance
-4. Update the `.env` file with your local configuration
-5. Run the migrations, you have to have the golang-migrate tool, if not, download it:
-    - `go install -tags 'mysql' github.com/golang-migrate/migrate/v4/cmd/migrate@latest`
-6. Run the application:
-```bash
-go run ./cmd/api/
-```
-
-To run the application with Docker and Docker Compose:
-1. Make sure you have Docker and Docker Compose installed.
-2. Update the `.env` file with your local configuration.
-3. Run docker compose up (the command is `docker compose` or `docker-compose`, depends on the installation):
+1. Ensure you have Docker and Docker Compose installed
+2. Run:
 ```bash
 docker compose up --build
 ```
-4. Run the migrations, the golang-migrate tool is already installed for you in the container, check the `Dockerfile` for reference, so just run the migration command from the container:
+If this is the first time you run `docker compose up`, you need to append the `--build` flag in order to build the Go project using the `Dockerfile`.
+Otherwise you can just run it without the `--build` flag.
+
+Note: depending on how you have installed Docker Compose, you might need to write the command in this way:
 ```bash
-docker compose exec -T app /usr/local/bin/migrate -path /migrations -database "mysql://root:$(MYSQL_ROOT_PASSWORD)@tcp(db-mysql:3306)/$(MYSQL_DATABASE)" up
+docker-compose up --build
 ```
+(it depends whether you have installed it as a plugin or a standalone tool).
